@@ -13,7 +13,7 @@ def home():
     return "✅ CryptoTitan bot is running!"
 
 def run():
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=3000)
 
 def keep_alive():
     Thread(target=run).start()
@@ -36,10 +36,9 @@ target_traits = {
 async def check_listings():
     await client.wait_until_ready()
     channel = client.get_channel(CHANNEL_ID)
-
     print(f"📡 Channel fetched in listings: {channel}")
 
-    if not channel:
+    if channel is None:
         print("❌ ERROR: Channel not found.")
         return
 
@@ -78,8 +77,7 @@ async def check_listings():
 
                     await channel.send(f"<@{MENTION_ID}>")
                     await channel.send(embed=embed)
-
-                    print(f"✅ New listing sent: {listing_id}")
+                    print(f"✅ Sent listing for {listing_id}")
 
         except Exception as e:
             print(f"❌ Error: {e}")
@@ -95,4 +93,7 @@ keep_alive()
 
 while True:
     try:
-        print("🟢 Running bot")
+        client.run(TOKEN)
+    except Exception as e:
+        print(f"💥 Bot crashed: {e}")
+        time.sleep(5)
