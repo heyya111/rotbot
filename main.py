@@ -94,11 +94,11 @@ async def on_ready():
 
 keep_alive()
 
-# 🔁 Restart the bot if it crashes
 while True:
     try:
         print("🟢 Starting Discord client...")
         client.run(TOKEN)
+        print("🔴 Discord client exited — something went wrong.")
     except Exception as e:
         print(f"💥 Bot crashed: {e}")
         time.sleep(5)
