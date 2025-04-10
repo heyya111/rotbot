@@ -22,6 +22,7 @@ def keep_alive():
 TOKEN = os.getenv("TOKEN")
 CHANNEL_ID = 1359805454733148311
 MENTION_ID = 859114146523512843
+USER_ID = 859114146523512843  # ID to send DM to
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -37,11 +38,13 @@ target_traits = {
 async def check_listings():
     await client.wait_until_ready()
     channel = client.get_channel(CHANNEL_ID)
+    user = await client.fetch_user(USER_ID)
 
     print(f"📡 Channel fetched in listings: {channel}")
+    print(f"📨 User fetched for DM: {user}")
 
-    if not channel:
-        print("❌ Channel not found.")
+    if not channel or not user:
+        print("❌ Missing channel or user.")
         return
 
     while True:
@@ -80,6 +83,9 @@ async def check_listings():
                     await channel.send(f"<@{MENTION_ID}>")
                     await channel.send(embed=embed)
 
+                    await user.send(f"📬 New listing for {name} just dropped:")
+                    await user.send(embed=embed)
+
                     print(f"✅ Sent listing: {listing_id}")
 
         except Exception as e:
@@ -98,7 +104,6 @@ while True:
     try:
         print("🟢 Starting Discord client...")
         client.run(TOKEN)
-        print("🔴 Discord client exited — something went wrong.")
     except Exception as e:
         print(f"💥 Bot crashed: {e}")
         time.sleep(5)
