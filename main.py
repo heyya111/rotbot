@@ -6,7 +6,6 @@ import asyncio
 import time
 import os
 
-# Flask server for uptime pings
 app = Flask('')
 
 @app.route('/')
@@ -19,13 +18,14 @@ def run():
 def keep_alive():
     Thread(target=run).start()
 
-# Discord bot setup
-TOKEN = os.getenv("TOKEN")  # secure token from env var
+TOKEN = os.getenv("TOKEN")
 CHANNEL_ID = 1359805454733148311
-MENTION_ID = 859114146523512843
+MENTION_ID = 859114146523512843  # heyya11's ID
+USER_ID = 859114146523512843     # user to DM
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True  # needed to fetch user by ID
 client = discord.Client(intents=intents)
 
 seen_ids = set()
@@ -38,10 +38,13 @@ target_traits = {
 async def check_listings():
     await client.wait_until_ready()
     channel = client.get_channel(CHANNEL_ID)
-    print(f"📡 Channel fetched in listings: {channel}")
+    user = await client.fetch_user(USER_ID)
 
-    if channel is None:
-        print("❌ ERROR: Channel not found.")
+    print(f"📡 Channel fetched in listings: {channel}")
+    print(f"📨 User fetched for DM: {user}")
+
+    if not channel or not user:
+        print("❌ ERROR: Channel or user not found.")
         return
 
     while True:
@@ -79,7 +82,9 @@ async def check_listings():
 
                     await channel.send(f"<@{MENTION_ID}>")
                     await channel.send(embed=embed)
-                    print(f"✅ Sent listing for {listing_id}")
+                    await user.send(embed=embed)
+
+                    print(f"✅ Sent listing to channel + DMs: {listing_id}")
 
         except Exception as e:
             print(f"❌ Error: {e}")
@@ -91,7 +96,6 @@ async def on_ready():
     print(f"✅ Logged in as {client.user}")
     client.loop.create_task(check_listings())
 
-# Run everything
 keep_alive()
 
 while True:
