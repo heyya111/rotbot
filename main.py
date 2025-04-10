@@ -6,17 +6,18 @@ import asyncio
 import time
 import os
 
-app = Flask('')
+app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "✅ CryptoTitan bot is running!"
+    return "✅ Bot is running!"
 
-def run():
+def run_flask():
     app.run(host='0.0.0.0', port=3000)
 
 def keep_alive():
-    Thread(target=run).start()
+    t = Thread(target=run_flask)
+    t.start()
 
 TOKEN = os.getenv("TOKEN")
 CHANNEL_ID = 1359805454733148311
@@ -36,10 +37,11 @@ target_traits = {
 async def check_listings():
     await client.wait_until_ready()
     channel = client.get_channel(CHANNEL_ID)
+
     print(f"📡 Channel fetched in listings: {channel}")
 
-    if channel is None:
-        print("❌ ERROR: Channel not found.")
+    if not channel:
+        print("❌ Channel not found.")
         return
 
     while True:
@@ -77,10 +79,11 @@ async def check_listings():
 
                     await channel.send(f"<@{MENTION_ID}>")
                     await channel.send(embed=embed)
-                    print(f"✅ Sent listing for {listing_id}")
+
+                    print(f"✅ Sent listing: {listing_id}")
 
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"❌ Error fetching listings: {e}")
 
         await asyncio.sleep(10)
 
@@ -91,8 +94,10 @@ async def on_ready():
 
 keep_alive()
 
+# 🔁 Restart the bot if it crashes
 while True:
     try:
+        print("🟢 Starting Discord client...")
         client.run(TOKEN)
     except Exception as e:
         print(f"💥 Bot crashed: {e}")
