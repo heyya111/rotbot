@@ -22,13 +22,13 @@ def keep_alive():
 TOKEN = os.getenv("TOKEN")
 CHANNEL_ID = 1359805454733148311
 MENTION_ID = 859114146523512843
-USER_ID = 859114146523512843  # ID to send DM to
+USER_ID = 859114146523512843
 
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 
-seen_ids = set()
+seen_listings = set()
 
 target_traits = {
     "element", "elemental 1", "elemental 2", "elemental 3", "elemental 4",
@@ -54,15 +54,16 @@ async def check_listings():
             data = response.json()
 
             for listing in data:
-                listing_id = listing.get("tokenMint")
+                token_mint = listing.get("tokenMint")
                 price = listing.get("price")
+                listing_key = f"{token_mint}-{price}"
                 token_data = listing.get("token", {})
                 name = token_data.get("name", "Unknown Titan")
                 image_url = token_data.get("image", "")
                 attributes = token_data.get("attributes", [])
 
-                if listing_id not in seen_ids:
-                    seen_ids.add(listing_id)
+                if listing_key not in seen_listings:
+                    seen_listings.add(listing_key)
 
                     filtered_traits = [
                         f"**{attr['trait_type']}**: {attr['value']}"
@@ -74,7 +75,7 @@ async def check_listings():
 
                     embed = discord.Embed(
                         title=f"🛎️ {name} listed!",
-                        description=f"**Price:** {price} SOL\n[🔗 View on Magic Eden](https://magiceden.io/item-details/{listing_id})",
+                        description=f"**Price:** {price} SOL\n[🔗 View on Magic Eden](https://magiceden.io/item-details/{token_mint})",
                         color=0x00ffcc
                     )
                     embed.set_image(url=image_url)
@@ -82,11 +83,10 @@ async def check_listings():
 
                     await channel.send(f"<@{MENTION_ID}>")
                     await channel.send(embed=embed)
-
                     await user.send(f"📬 New listing for {name} just dropped:")
                     await user.send(embed=embed)
 
-                    print(f"✅ Sent listing: {listing_id}")
+                    print(f"✅ Sent listing: {listing_key}")
 
         except Exception as e:
             print(f"❌ Error fetching listings: {e}")
