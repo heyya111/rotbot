@@ -1,13 +1,13 @@
-import os
 import discord
 import requests
 import asyncio
 from flask import Flask
 from threading import Thread
 
-TOKEN = os.getenv("DISCORD_TOKEN")
-CHANNEL_ID = int(os.getenv("DISCORD_CHANNEL_ID"))
-MENTION_ID = os.getenv("MENTION_ID")
+# 🔧 CONFIGURATION (fill in your actual values below)
+TOKEN = "YOUR_DISCORD_BOT_TOKEN"
+CHANNEL_ID = 1359805454733148311   # Replace with your channel ID
+MENTION_ID = 859114146523512843    # Replace with user ID to mention
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -28,7 +28,7 @@ async def check_listings():
             response = requests.get(url)
             data = response.json()
 
-            for listing in reversed(data):  # older first
+            for listing in reversed(data):
                 listing_id = listing.get("tokenMint")
                 if listing_id in last_seen_ids:
                     continue
