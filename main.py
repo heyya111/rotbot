@@ -26,8 +26,8 @@ MENTION_ID = 859114146523512843
 USER_ID = 859114146523512843  # for DMs
 
 # Telegram
-TELEGRAM_TOKEN = os.getenv("7919023835:AAGVoAf484QZJED79osG_3wdq319JWzYaQI")
-TELEGRAM_USER_ID = os.getenv("1674637146")
+TELEGRAM_TOKEN = os.getenv("TG_TOKEN")
+TELEGRAM_USER_ID = os.getenv("TG_USER")
 
 intents = discord.Intents.default()
 intents.message_content = True
