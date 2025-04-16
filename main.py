@@ -19,10 +19,15 @@ def keep_alive():
     t = Thread(target=run_flask)
     t.start()
 
+# Discord
 TOKEN = os.getenv("TOKEN")
 CHANNEL_ID = 1359805454733148311
 MENTION_ID = 859114146523512843
-USER_ID = 859114146523512843  # ID to send DM to
+USER_ID = 859114146523512843  # for DMs
+
+# Telegram
+TELEGRAM_TOKEN = os.getenv("7919023835:AAGVoAf484QZJED79osG_3wdq319JWzYaQI")
+TELEGRAM_USER_ID = os.getenv("1674637146")
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -40,7 +45,7 @@ async def check_listings():
     channel = client.get_channel(CHANNEL_ID)
     user = await client.fetch_user(USER_ID)
 
-    print(f"📡 Channel fetched in listings: {channel}")
+    print(f"📡 Channel fetched: {channel}")
     print(f"📨 User fetched for DM: {user}")
 
     if not channel or not user:
@@ -80,11 +85,24 @@ async def check_listings():
                     embed.set_image(url=image_url)
                     embed.add_field(name="Traits", value=traits_text, inline=False)
 
+                    # Discord alert (channel)
                     await channel.send(f"<@{MENTION_ID}>")
                     await channel.send(embed=embed)
 
+                    # Discord DM
                     await user.send(f"📬 New listing for {name} just dropped:")
                     await user.send(embed=embed)
+
+                    # Telegram alert
+                    try:
+                        msg = f"🛎️ {name} listed!\nPrice: {price} SOL\nhttps://magiceden.io/item-details/{listing_id}"
+                        requests.post(
+                            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                            data={"chat_id": TELEGRAM_USER_ID, "text": msg}
+                        )
+                        print(f"📲 Telegram alert sent to {TELEGRAM_USER_ID}")
+                    except Exception as e:
+                        print(f"❌ Failed to send Telegram alert: {e}")
 
                     print(f"✅ Sent listing: {listing_id}")
 
