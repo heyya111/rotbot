@@ -1,92 +1,109 @@
+from flask import Flask
+from threading import Thread
 import discord
 import requests
 import asyncio
-from flask import Flask
-from threading import Thread
+import time
+import os
 
-# 🔧 CONFIGURATION (fill in your actual values below)
-TOKEN = "YOUR_DISCORD_BOT_TOKEN"
-CHANNEL_ID = 1359805454733148311   # Replace with your channel ID
-MENTION_ID = 859114146523512843    # Replace with user ID to mention
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "✅ Bot is running!"
+
+def run_flask():
+    app.run(host='0.0.0.0', port=3000)
+
+def keep_alive():
+    t = Thread(target=run_flask)
+    t.start()
+
+TOKEN = os.getenv("TOKEN")
+CHANNEL_ID = 1359805454733148311
+MENTION_ID = 859114146523512843
+USER_ID = 859114146523512843  # ID to send DM to
 
 intents = discord.Intents.default()
-intents.guilds = True
-intents.messages = True
-
+intents.message_content = True
 client = discord.Client(intents=intents)
 
-last_seen_ids = []
+seen_ids = set()
+
+target_traits = {
+    "element", "elemental 1", "elemental 2", "elemental 3", "elemental 4",
+    "attack 5", "attack 6", "defense 7", "defense 8", "support 9"
+}
 
 async def check_listings():
     await client.wait_until_ready()
     channel = client.get_channel(CHANNEL_ID)
-    print("📡 Channel fetched in listings:", channel.name if channel else "None")
+    user = await client.fetch_user(USER_ID)
 
-    while not client.is_closed():
+    print(f"📡 Channel fetched in listings: {channel}")
+    print(f"📨 User fetched for DM: {user}")
+
+    if not channel or not user:
+        print("❌ Missing channel or user.")
+        return
+
+    while True:
         try:
             url = "https://api-mainnet.magiceden.dev/v2/collections/cryptotitans/listings?offset=0&limit=20"
             response = requests.get(url)
             data = response.json()
 
-            for listing in reversed(data):
+            for listing in data:
                 listing_id = listing.get("tokenMint")
-                if listing_id in last_seen_ids:
-                    continue
-
-                last_seen_ids.append(listing_id)
-                if len(last_seen_ids) > 50:
-                    last_seen_ids.pop(0)
-
                 price = listing.get("price")
-                token = listing.get("tokenMint")
-                link = f"https://magiceden.io/item-details/{token}"
-                name = listing.get("token", {}).get("name", "Unknown Titan")
-                image = listing.get("token", {}).get("image")
+                token_data = listing.get("token", {})
+                name = token_data.get("name", "Unknown Titan")
+                image_url = token_data.get("image", "")
+                attributes = token_data.get("attributes", [])
 
-                attributes = listing.get("token", {}).get("attributes", [])
-                traits = {attr["trait_type"]: attr["value"] for attr in attributes}
-                trait_fields = [
-                    "Element", "Elemental 1", "Elemental 2", "Elemental 3", "Elemental 4",
-                    "Attack 5", "Attack 6", "Defense 7", "Defense 8", "Support 9"
-                ]
-                trait_text = "\n".join(
-                    f"**{t}**: {traits.get(t, '—')}" for t in trait_fields
-                )
+                if listing_id not in seen_ids:
+                    seen_ids.add(listing_id)
 
-                embed = discord.Embed(
-                    title=f"{name} listed for {price} SOL",
-                    url=link,
-                    description=trait_text,
-                    color=0x00ffcc
-                )
-                if image:
-                    embed.set_image(url=image)
+                    filtered_traits = [
+                        f"**{attr['trait_type']}**: {attr['value']}"
+                        for attr in attributes
+                        if attr['trait_type'].lower() in target_traits
+                    ]
 
-                await channel.send(content=f"<@{MENTION_ID}>", embed=embed)
-                print(f"✅ New listing sent: {listing_id}")
+                    traits_text = "\n".join(filtered_traits) or "No matching traits found"
+
+                    embed = discord.Embed(
+                        title=f"🛎️ {name} listed!",
+                        description=f"**Price:** {price} SOL\n[🔗 View on Magic Eden](https://magiceden.io/item-details/{listing_id})",
+                        color=0x00ffcc
+                    )
+                    embed.set_image(url=image_url)
+                    embed.add_field(name="Traits", value=traits_text, inline=False)
+
+                    await channel.send(f"<@{MENTION_ID}>")
+                    await channel.send(embed=embed)
+
+                    await user.send(f"📬 New listing for {name} just dropped:")
+                    await user.send(embed=embed)
+
+                    print(f"✅ Sent listing: {listing_id}")
 
         except Exception as e:
-            print("Error while checking listings:", e)
+            print(f"❌ Error fetching listings: {e}")
 
         await asyncio.sleep(10)
 
 @client.event
 async def on_ready():
     print(f"✅ Logged in as {client.user}")
-    channel = client.get_channel(CHANNEL_ID)
-    if channel:
-        print("📡 Channel fetched on startup:", channel.name)
+    client.loop.create_task(check_listings())
 
-app = Flask(__name__)
+keep_alive()
 
-@app.route('/')
-def home():
-    return "CryptoTitan bot is live."
-
-def run_flask():
-    app.run(host="0.0.0.0", port=3000)
-
-Thread(target=run_flask).start()
-client.loop.create_task(check_listings())
-print("🟢 Starting Discord client...")
-client.run(TOKEN)
+while True:
+    try:
+        print("🟢 Starting Discord client...")
+        client.run(TOKEN)
+    except Exception as e:
+        print(f"💥 Bot crashed: {e}")
+        time.sleep(5)
